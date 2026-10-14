@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<title>SPACE INVADERS — Neon Edition</title>
+<meta name="description" content="Envahisseurs néon : un space invaders moderne en HTML5 et Canvas, avec boucliers destructibles, OVNI bonus et vagues infinies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#05070d; --bg1:#0c1220; --panel:rgba(18,26,40,.62); --panel2:rgba(28,38,56,.55);
+  --ink:#e9f2ff; --dim:#8ba0bd; --edge:rgba(255,255,255,.10);
+  --cy:#31e8ff; --mg:#ff4fd8; --vi:#9b6bff; --li:#5cf9a4; --am:#ffc94a; --rd:#ff5f6d;
+  --accent:var(--vi);
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --disp:'Silkscreen','IBM Plex Mono',monospace;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--ink); font-family:var(--body);
+  background:
+    radial-gradient(1200px 700px at 50% -12%, rgba(155,107,255,.14), transparent 62%),
+    radial-gradient(820px 560px at 8% 106%, rgba(49,232,255,.12), transparent 60%),
+    radial-gradient(820px 560px at 96% 96%, rgba(255,79,216,.10), transparent 60%),
+    linear-gradient(180deg,var(--bg1),var(--bg0));
+  background-attachment:fixed;
+  display:flex; flex-direction:column; align-items:center;
+  padding:16px 14px 22px; overflow-x:hidden;
+}
+/* ---------- ambient layers ---------- */
+.grid-veil{position:fixed; inset:-60px; z-index:0; pointer-events:none; opacity:.30;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:46px 46px; animation:drift 24s linear infinite;
+  -webkit-mask-image:radial-gradient(80% 70% at 50% 40%,#000 25%,transparent 100%);
+          mask-image:radial-gradient(80% 70% at 50% 40%,#000 25%,transparent 100%);}
+@keyframes drift{to{background-position:46px 46px,46px 46px}}
+.orb{position:fixed; z-index:0; border-radius:50%; filter:blur(70px); opacity:.35; pointer-events:none; animation:float 18s ease-in-out infinite}
+.orb.a{width:420px;height:420px;left:-8%;top:6%;background:radial-gradient(circle,var(--vi),transparent 62%)}
+.orb.b{width:380px;height:380px;right:-6%;top:38%;background:radial-gradient(circle,var(--mg),transparent 62%);animation-delay:-6s}
+.orb.c{width:340px;height:340px;left:38%;bottom:-14%;background:radial-gradient(circle,var(--cy),transparent 62%);animation-delay:-11s}
+@keyframes float{0%,100%{transform:translate3d(0,0,0) scale(1)}33%{transform:translate3d(40px,-30px,0) scale(1.12)}66%{transform:translate3d(-30px,26px,0) scale(.94)}}
+.scan{position:fixed; inset:0; z-index:9; pointer-events:none; mix-blend-mode:overlay; opacity:.30;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px)}
+.vig{position:fixed; inset:0; z-index:8; pointer-events:none; box-shadow:inset 0 0 220px 40px rgba(0,0,0,.62)}
+
+.shell{position:relative; z-index:2; width:min(1180px,100%)}
+
+/* ---------- marquee ---------- */
+.marquee{display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap;
+  padding:4px 4px 14px; border-bottom:1px solid var(--edge); margin-bottom:16px}
+.brand{display:flex; align-items:center; gap:14px}
+.glyph{display:grid; grid-template-columns:repeat(2,11px); grid-gap:3px}
+.glyph i{width:11px;height:11px;display:block;border-radius:2px;animation:blink 2.6s steps(1) infinite}
+.glyph i:nth-child(1){background:var(--vi)}
+.glyph i:nth-child(2){background:var(--mg);animation-delay:.4s}
+.glyph i:nth-child(3){background:var(--cy);animation-delay:.8s}
+.glyph i:nth-child(4){background:var(--am);animation-delay:1.2s}
+@keyframes blink{0%,70%{opacity:1}71%,100%{opacity:.22}}
+h1{margin:0; font-family:var(--disp); font-weight:700; letter-spacing:.05em;
+  font-size:clamp(24px,4.4vw,46px); line-height:1; display:flex}
+h1 span{display:inline-block; text-shadow:0 0 24px currentColor; animation:hum 4.2s ease-in-out infinite}
+h1 span:nth-child(1){color:var(--vi)} h1 span:nth-child(2){color:var(--mg);animation-delay:.12s}
+h1 span:nth-child(3){color:var(--cy);animation-delay:.24s} h1 span:nth-child(4){color:var(--li);animation-delay:.36s}
+h1 span:nth-child(5){color:var(--am);animation-delay:.48s} h1 span:nth-child(6){color:var(--vi);animation-delay:.6s}
+h1 span:nth-child(7){color:var(--mg);animation-delay:.72s} h1 span:nth-child(8){color:var(--cy);animation-delay:.84s}
+@keyframes hum{0%,100%{transform:translateY(0);opacity:1}50%{transform:translateY(-3px);opacity:.82}}
+.tag{margin:6px 0 0; font-family:var(--mono); font-size:11px; letter-spacing:.22em; color:var(--dim)}
+.meta{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+.chip{display:flex; flex-direction:column; gap:3px; min-width:88px; padding:8px 12px; border-radius:10px;
+  background:var(--panel); border:1px solid var(--edge); backdrop-filter:blur(10px)}
+.chip .k{font-family:var(--mono); font-size:9px; letter-spacing:.2em; color:var(--dim)}
+.chip b{font-family:var(--disp); font-size:17px; letter-spacing:.02em}
+.chip.best b{color:var(--am); text-shadow:0 0 16px rgba(255,201,74,.55)}
+.chip.lvl b{color:var(--vi); text-shadow:0 0 16px rgba(155,107,255,.55)}
+.chip.fps b{color:var(--cy)}
+.home{display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:10px; text-decoration:none;
+  font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--dim);
+  background:var(--panel); border:1px solid var(--edge); transition:all .18s cubic-bezier(.2,.9,.2,1)}
+.home:hover{color:var(--vi); border-color:var(--vi); box-shadow:0 0 22px -6px var(--vi); transform:translateY(-1px)}
+
+/* ---------- stage ---------- */
+.stage{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start}
+@media (max-width:960px){.stage{grid-template-columns:1fr}}
+
+.board{position:relative; border-radius:var(--r); overflow:hidden;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg,rgba(10,16,28,.9),rgba(4,7,14,.94));
+  box-shadow:0 30px 80px -30px rgba(0,0,0,.9), 0 0 0 1px rgba(155,107,255,.06) inset,
+             0 0 60px -20px rgba(155,107,255,.35);
+  animation:rise .7s cubic-bezier(.2,.9,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.985)}to{opacity:1;transform:none}}
+canvas{display:block; width:100%; height:auto; aspect-ratio:3/2; touch-action:none}
+.frame{position:absolute; inset:0; pointer-events:none; border-radius:var(--r);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 0 90px rgba(155,107,255,.07)}
+.flash{position:absolute; inset:0; pointer-events:none; opacity:0; background:radial-gradient(circle at 50% 50%,rgba(255,95,109,.55),transparent 62%)}
+.flash.on{animation:flashfx .5s ease-out}
+@keyframes flashfx{0%{opacity:.9}100%{opacity:0}}
+
+/* banner */
+.banner{position:absolute; left:50%; top:38%; transform:translate(-50%,-50%) scale(.8); opacity:0; pointer-events:none; text-align:center}
+.banner b{display:block; font-family:var(--disp); font-size:clamp(22px,4vw,44px); letter-spacing:.08em;
+  color:#fff; text-shadow:0 0 30px var(--vi),0 0 60px rgba(155,107,255,.6)}
+.banner span{display:block; margin-top:8px; font-family:var(--mono); font-size:11px; letter-spacing:.3em; color:var(--dim)}
+.banner.show{animation:bannerfx 1.9s cubic-bezier(.2,.9,.2,1) both}
+@keyframes bannerfx{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.6);filter:blur(14px)}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.04);filter:blur(0)}
+  30%{transform:translate(-50%,-50%) scale(1)}
+  78%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-64%) scale(1.1);filter:blur(8px)}
+}
+
+/* overlays */
+.ov{position:absolute; inset:0; display:grid; place-items:center; padding:22px; text-align:center;
+  background:radial-gradient(circle at 50% 40%,rgba(6,10,20,.72),rgba(3,5,10,.94));
+  backdrop-filter:blur(7px); opacity:0; visibility:hidden; transition:opacity .3s ease, visibility .3s}
+.ov.on{opacity:1; visibility:visible}
+.ov .card{max-width:540px; animation:pop .45s cubic-bezier(.2,.9,.2,1) both}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.94)}to{opacity:1;transform:none}}
+.ov h2{margin:0 0 6px; font-family:var(--disp); font-size:clamp(20px,3.4vw,34px); letter-spacing:.06em}
+.ov h2.vi{color:var(--vi); text-shadow:0 0 26px rgba(155,107,255,.6)}
+.ov h2.mg{color:var(--mg); text-shadow:0 0 26px rgba(255,79,216,.6)}
+.ov h2.am{color:var(--am); text-shadow:0 0 26px rgba(255,201,74,.6)}
+.ov p{margin:0 0 18px; color:var(--dim); font-size:14px; line-height:1.6}
+.ov .stats{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:0 0 18px}
+.ov .stats div{padding:8px 14px; border-radius:10px; background:var(--panel2); border:1px solid var(--edge); font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--dim)}
+.ov .stats b{display:block; margin-top:4px; font-family:var(--disp); font-size:18px; letter-spacing:.02em; color:var(--ink)}
+.keys{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px}
+kbd{font-family:var(--mono); font-size:11px; padding:5px 9px; border-radius:7px; color:var(--ink);
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03)); border:1px solid var(--edge);
+  box-shadow:0 2px 0 rgba(0,0,0,.5)}
+
+.diffs{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 18px}
+.dbtn{appearance:none; cursor:pointer; font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--dim);
+  padding:9px 14px; border-radius:10px; background:var(--panel2); border:1px solid var(--edge);
+  transition:all .18s cubic-bezier(.2,.9,.2,1)}
+.dbtn:hover{color:var(--ink); border-color:var(--vi)}
+.dbtn.on{color:#0b0418; background:linear-gradient(120deg,var(--vi),var(--mg)); border-color:transparent;
+  box-shadow:0 0 24px -6px var(--vi)}
+
+.btn{appearance:none; cursor:pointer; font-family:var(--disp); font-size:14px; letter-spacing:.08em; color:#0b0418;
+  padding:13px 26px; border-radius:12px; border:0; position:relative;
+  background:linear-gradient(120deg,var(--vi),var(--mg) 55%,var(--vi));
+  background-size:200% 100%; animation:sheen 4s linear infinite;
+  box-shadow:0 0 0 1px rgba(155,107,255,.5), 0 12px 34px -12px rgba(155,107,255,.85);
+  transition:transform .16s cubic-bezier(.2,.9,.2,1), box-shadow .16s}
+.btn:hover{transform:translateY(-2px) scale(1.03); box-shadow:0 0 0 1px rgba(155,107,255,.8), 0 18px 44px -12px rgba(155,107,255,1)}
+.btn:active{transform:translateY(0) scale(.98)}
+@keyframes sheen{to{background-position:200% 0}}
+.btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--edge); box-shadow:none; animation:none}
+.btn.ghost:hover{border-color:var(--vi); color:var(--vi); box-shadow:0 0 24px -6px rgba(155,107,255,.7)}
+.btnrow{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+
+/* ---------- panel ---------- */
+.panel{display:grid; gap:12px; animation:rise .7s .1s cubic-bezier(.2,.9,.2,1) both}
+.card-p{padding:14px; border-radius:var(--r); background:var(--panel); border:1px solid var(--edge); backdrop-filter:blur(12px);
+  box-shadow:0 18px 40px -26px rgba(0,0,0,.9)}
+.lbl{font-family:var(--mono); font-size:9px; letter-spacing:.24em; color:var(--dim); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center}
+.lbl b{font-family:var(--disp); font-size:13px; color:var(--ink); letter-spacing:.02em}
+.score{font-family:var(--disp); font-size:clamp(30px,4.6vw,44px); line-height:1; letter-spacing:.02em;
+  color:#fff; text-shadow:0 0 26px rgba(155,107,255,.55); transition:transform .12s}
+.score.long{font-size:clamp(22px,3.2vw,31px)}
+.score.bump{animation:bump .28s cubic-bezier(.2,.9,.2,1)}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.14);color:var(--vi)}100%{transform:scale(1)}}
+.bar{height:7px; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; position:relative}
+.bar i{display:block; height:100%; width:0%; border-radius:99px; transition:width .25s cubic-bezier(.2,.9,.2,1)}
+.bar.combo i{background:linear-gradient(90deg,var(--vi),var(--mg)); box-shadow:0 0 16px rgba(255,79,216,.7)}
+.bar.prog i{background:linear-gradient(90deg,var(--cy),var(--vi)); box-shadow:0 0 16px rgba(155,107,255,.6)}
+.mult{font-family:var(--disp); font-size:15px; color:var(--mg); text-shadow:0 0 14px rgba(255,79,216,.7)}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.mini{padding:9px 11px; border-radius:10px; background:var(--panel2); border:1px solid var(--edge)}
+.mini span{display:block; font-family:var(--mono); font-size:9px; letter-spacing:.2em; color:var(--dim)}
+.mini b{font-family:var(--disp); font-size:16px}
+.acts{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.sbtn{appearance:none; cursor:pointer; font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--ink);
+  padding:10px 8px; border-radius:10px; background:var(--panel2); border:1px solid var(--edge);
+  transition:all .18s cubic-bezier(.2,.9,.2,1)}
+.sbtn:hover{border-color:var(--accent); color:var(--accent); transform:translateY(-1px); box-shadow:0 0 20px -6px var(--accent)}
+.sbtn.full{grid-column:1/-1}
+.sbtn.off{color:var(--dim); opacity:.6}
+.sbtn.on{color:var(--vi); border-color:rgba(155,107,255,.5)}
+
+/* ---------- pad tactile ---------- */
+.dpad{display:none; margin-top:14px; grid-template-columns:repeat(3,64px); grid-gap:8px; justify-content:center}
+.dpad button{appearance:none; border:1px solid var(--edge); border-radius:12px; cursor:pointer;
+  height:56px; font-size:18px; color:var(--ink); background:var(--panel2);
+  transition:all .12s cubic-bezier(.2,.9,.2,1)}
+.dpad button:active{transform:scale(.94); color:var(--vi); border-color:var(--vi); box-shadow:0 0 22px -6px var(--vi)}
+.dpad .u{grid-column:2} .pad-l{grid-column:1; grid-row:2} .pad-p{grid-column:2; grid-row:2}
+.pad-r{grid-column:3; grid-row:2} .pad-d{grid-column:2; grid-row:3}
+@media (hover:none) and (pointer:coarse){.dpad{display:grid}}
+@media (max-width:640px){.dpad{display:grid}}
+
+/* legend */
+.legend{margin-top:16px; padding-top:12px; border-top:1px solid var(--edge); display:flex; gap:16px; flex-wrap:wrap;
+  align-items:center; justify-content:space-between; font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--dim)}
+.legend .lk{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+</style>
+</head>
+<body>
+<div class="grid-veil"></div><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
+<div class="scan"></div><div class="vig"></div>
+
+<div class="shell">
+  <header class="marquee">
+    <div class="brand">
+      <div class="glyph"><i></i><i></i><i></i><i></i></div>
+      <div>
+        <h1><span>I</span><span>N</span><span>V</span><span>A</span><span>D</span><span>E</span><span>R</span><span>S</span></h1>
+        <p class="tag">SPACE INVADERS · HTML5 CANVAS EDITION</p>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="chip lvl"><span class="k">VAGUE</span><b id="mLvl">1</b></div>
+      <div class="chip best"><span class="k">RECORD</span><b id="mBest">0</b></div>
+      <div class="chip fps"><span class="k">IPS</span><b id="mFps">60</b></div>
+      <a class="home" href="index.html">← ACCUEIL</a>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="board">
+      <canvas id="game" width="960" height="640"></canvas>
+      <div class="frame"></div>
+      <div class="flash" id="flash"></div>
+      <div class="banner" id="banner"><b id="bnTitle">VAGUE 1</b><span id="bnSub">PRÊT ?</span></div>
+
+      <div class="ov on" id="ovStart">
+        <div class="card">
+          <h2 class="vi">SPACE INVADERS</h2>
+          <p>Détruise les 55 envahisseurs avant qu'ils n'atteignent ta base. Les boucliers encaissent les tirs mais se désintègrent. Un OVNI traverse le ciel : il rapporte gros.<br>Enchaîne les touches rapides pour gonfler ton multiplicateur.</p>
+          <div class="keys">
+            <kbd>← →</kbd><kbd>A Q D</kbd><kbd>ESPACE : TIR</kbd><kbd>P : pause</kbd><kbd>R : rejouer</kbd><kbd>Glisser : viser</kbd>
+          </div>
+          <div class="diffs" id="diffs">
+            <button class="dbtn" data-diff="debutant">DÉBUTANT</button>
+            <button class="dbtn on" data-diff="normal">NORMAL</button>
+            <button class="dbtn" data-diff="rapide">RAPIDE</button>
+          </div>
+          <div class="btnrow"><button class="btn" id="bStart">DÉMARRER</button></div>
+        </div>
+      </div>
+
+      <div class="ov" id="ovPause">
+        <div class="card">
+          <h2 class="am">PAUSE</h2>
+          <p>Les envahisseurs patientent. Reprends quand tu veux.</p>
+          <div class="btnrow"><button class="btn" id="bResume">REPRENDRE</button><button class="btn ghost" id="bRestart2">RECOMMENCER</button></div>
+        </div>
+      </div>
+
+      <div class="ov" id="ovOver">
+        <div class="card">
+          <h2 class="mg" id="goTitle">PARTIE TERMINÉE</h2>
+          <div class="stats">
+            <div>SCORE<b id="goScore">0</b></div>
+            <div>RECORD<b id="goBest">0</b></div>
+            <div>VAGUE<b id="goWave">1</b></div>
+          </div>
+          <p id="goMsg">La base est tombée.</p>
+          <div class="btnrow"><button class="btn" id="bRestart">REJOUER</button></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="card-p">
+        <div class="lbl"><span>SCORE</span><span id="pMultWrap" class="mult">x1</span></div>
+        <div class="score" id="pScore">0</div>
+        <div class="lbl" style="margin-top:14px"><span>COMBO</span><span id="pCombo">0</span></div>
+        <div class="bar combo"><i id="pComboBar"></i></div>
+      </div>
+
+      <div class="card-p">
+        <div class="lbl"><span>VAGUE <b id="pLvl">1</b></span><span id="pNext">55 ENVAHISSEURS</span></div>
+        <div class="bar prog"><i id="pProg"></i></div>
+        <div class="grid2" style="margin-top:12px">
+          <div class="mini"><span>CADENCE</span><b id="pSpeed">60</b></div>
+          <div class="mini"><span>VIES</span><b id="pLives">3</b></div>
+        </div>
+      </div>
+
+      <div class="card-p">
+        <div class="grid2">
+          <div class="mini"><span>ENVAHISSEURS</span><b id="pLeft">55</b></div>
+          <div class="mini"><span>COMBO MAX</span><b id="pMaxCombo">0</b></div>
+          <div class="mini"><span>PRÉCISION</span><b id="pAcc">0%</b></div>
+          <div class="mini"><span>RECORD</span><b id="pBest">0</b></div>
+        </div>
+        <div class="acts" style="margin-top:10px">
+          <button class="sbtn" id="bPause">PAUSE</button>
+          <button class="sbtn" id="bSound">SON : ON</button>
+          <button class="sbtn" id="bShield">SANS BOUCLIERS</button>
+          <button class="sbtn" id="bRestart3">RECOMMENCER</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="dpad" id="dpad">
+    <button class="u" id="bFire" aria-label="Tir">✦</button>
+    <button class="pad-l" id="bLeft" aria-label="Gauche">◀</button>
+    <button class="pad-p" id="bPadPause" aria-label="Pause">❚❚</button>
+    <button class="pad-r" id="bRight" aria-label="Droite">▶</button>
+  </div>
+
+  <footer class="legend">
+    <div class="lk">
+      <span>MOUVEMENT</span><kbd>← →</kbd><kbd>A Q D</kbd><kbd>GLISSE</kbd>
+      <span style="margin-left:10px">TIR</span><kbd>ESPACE</kbd>
+      <span style="margin-left:10px">PAUSE</span><kbd>P</kbd>
+      <span style="margin-left:10px">REJOUER</span><kbd>R</kbd>
+      <span style="margin-left:10px">SON</span><kbd>M</kbd>
+    </div>
+    <div id="lgBonus">OVNI : 50 → 300 PTS · COMBO RAPIDE : x2 → x5</div>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   SPACE INVADERS — NEON EDITION
+   ============================================================ */
+const CV = document.getElementById('game');
+const X  = CV.getContext('2d');
+const W = 960, H = 640;
+
+/* ---------- utils ---------- */
+const TAU = Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function rr(c,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  c.beginPath();
+  c.moveTo(x+r,y);
+  c.arcTo(x+w,y,x+w,y+h,r);
+  c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r);
+  c.arcTo(x,y,x+w,y,r);
+  c.closePath();
+}
+const hex2rgb=h=>{h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];};
+const rgba=(h,a)=>{const [r,g,b]=hex2rgb(h);return `rgba(${r},${g},${b},${a})`;};
+
+/* ---------- sprites pixel ---------- */
+const PIX = {
+  squid:[
+    ['...##...','..####..','.######.','##.##.##','########','..#..#..','.#.##.#.','#.#..#.#'],
+    ['...##...','..####..','.######.','##.##.##','########','.#.##.#.','#.#..#.#','.#....#.']
+  ],
+  crab:[
+    ['..#.....#..','...#...#...','..#######..','.##.....##.','###########','#.#######.#','#.#.....#.#','...##.##...'],
+    ['..#.....#..','#..#...#..#','#.#######.#','###.....###','###########','.#########.','..#.....#..','.#.......#.']
+  ],
+  octo:[
+    ['...######...','############','##..####..##','############','...#....#...','....#..#....'],
+    ['...######...','############','##..####..##','############','..#..##..#..','.#..#..#..#.']
+  ],
+  ship:[
+    ['......#......','......#......','.....###.....','.....###.....','.###########.','#############','#############','###.#####.###']
+  ],
+  ufo:[
+    ['.....######.....','...##########...','..############..','.##############.','##..########..##','..###......###..','....#......#....']
+  ]
+};
+function makeSprite(rows, color, px){
+  const w = rows[0].length, h = rows.length;
+  const c = document.createElement('canvas');
+  c.width = w*px + 10; c.height = h*px + 10;
+  const g = c.getContext('2d');
+  g.translate(5,5);
+  g.shadowColor = rgba(color,.9); g.shadowBlur = px*3.4;
+  g.fillStyle = color;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(rows[y][x]==='#') g.fillRect(x*px, y*px, px, px);
+  g.shadowBlur = 0;
+  g.fillStyle = 'rgba(255,255,255,.72)';
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(rows[y][x]==='#') g.fillRect(x*px+px*.28, y*px+px*.28, px*.44, px*.44);
+  return {c, w:w*px, h:h*px, off:5};
+}
+const SPR = {
+  squid:PIX.squid.map(r=>makeSprite(r,'#ff4fd8',3)),
+  crab :PIX.crab .map(r=>makeSprite(r,'#31e8ff',3)),
+  octo :PIX.octo .map(r=>makeSprite(r,'#9b6bff',3)),
+  ship :[makeSprite(PIX.ship[0],'#5cf9a4',4)],
+  ufo  :[makeSprite(PIX.ufo[0],'#ffc94a',4)]
+};
+
+/* ---------- config ---------- */
+const DIFF = {
+  debutant:{inv:.74, fire:1.60, shots:1, cd:.42, lives:4, spd:330, label:'DÉBUTANT'},
+  normal:  {inv:.62, fire:1.20, shots:1, cd:.34, lives:3, spd:360, label:'NORMAL'},
+  rapide:  {inv:.50, fire:.92,  shots:2, cd:.26, lives:3, spd:395, label:'RAPIDE'}
+};
+const COLS = 11, ROWS = 5, CELLW = 64, CELLH = 48, STEPX = 14, DROP = 22;
+const COMBO_WIN = 2.2, DIE_FADE = 1.15, WAVE_PAUSE = 1.8;
+const UFO_MIN = 13, UFO_MAX = 24;
+const BCOLS = 11, BROWS = 7, BCS = 7;
+const BSHAPE = ['..#######..','.#########.','###########','###########','###########','####...####','###.....###'];
+
+/* ---------- audio ---------- */
+const SND = {
+  ctx:null, master:null, muted:false,
+  init(){
+    if(this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.22;
+    const comp = this.ctx.createDynamicsCompressor();
+    this.master.connect(comp); comp.connect(this.ctx.destination);
+  },
+  tone(freq, dur=0.09, type='square', vol=1, slide=0){
+    if(!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq+slide), t+dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t+dur+0.02);
+  },
+  noise(dur=0.12, vol=0.5, hp=800){
+    if(!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const n = Math.floor(this.ctx.sampleRate*dur);
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i] = (Math.random()*2-1)*(1-i/n);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const f = this.ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value = hp;
+    const g = this.ctx.createGain(); g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t);
+  },
+  arp(list, gap=0.075, type='square', vol=.45){
+    list.forEach((f,i)=>setTimeout(()=>this.tone(f, .1, type, vol), i*gap*1000));
+  }
+};
+
+/* ---------- état ---------- */
+const G = {
+  state:'menu',                 // menu | playing | paused | dying | wave | over
+  diff:'normal',
+  shields:true,
+  wave:1, score:0, disp:0, best:+(localStorage.getItem('neoinv.best')||0),
+  combo:0, maxCombo:0, mult:1, lastHit:-99,
+  lives:3, inv:[], total:55, alive:55, fx:0, fy:0, dir:1, frame:0, invT:0, steps:0,
+  px:W/2, py:H-52, pw:0, ph:0, bullets:[], ebullets:[], fired:0, hits:0, lastShot:-9,
+  ufo:null, ufoT:12, bunkers:[],
+  parts:[], rings:[], pops:[],
+  t:0, deathT:0, waveT:0, shieldT:0, shake:0,
+  keys:{}, touch:null, padL:false, padR:false, padFire:false,
+  deathMsg:'', newRecord:false,
+  fps:60, fpsAcc:0, fpsN:0
+};
+
+/* ---------- DOM ---------- */
+const D = {};
+['mLvl','mBest','mFps','pScore','pMultWrap','pCombo','pComboBar','pLvl','pNext','pProg','pSpeed','pLives',
+ 'pLeft','pMaxCombo','pAcc','pBest','bStart','bResume','bRestart','bRestart2','bRestart3','bPause','bSound',
+ 'bShield','bPadPause','bFire','bLeft','bRight','ovStart','ovPause','ovOver','goTitle','goScore','goBest','goWave','goMsg',
+ 'banner','bnTitle','bnSub','flash','diffs','dpad'].forEach(id=>D[id]=document.getElementById(id));
+
+/* ---------- terrain ---------- */
+function buildBunkers(){
+  G.bunkers = [];
+  if(!G.shields) return;
+  for(let i=0;i<4;i++){
+    const x = Math.round(i*240 + (240 - BCOLS*BCS)/2);
+    const y = H - 168;
+    const cells = new Uint8Array(BCOLS*BROWS);
+    for(let r=0;r<BROWS;r++) for(let c=0;c<BCOLS;c++)
+      cells[r*BCOLS+c] = BSHAPE[r][c] === '#' ? 2 : 0;
+    G.bunkers.push({x, y, w:BCOLS*BCS, h:BROWS*BCS, cells});
+  }
+}
+function buildWave(){
+  G.inv = [];
+  G.fx = (W - COLS*CELLW)/2;
+  G.fy = Math.min(210, 84 + (G.wave-1)*16);
+  G.dir = 1; G.frame = 0; G.invT = 0;
+  for(let r=0;r<ROWS;r++){
+    const type = r === 0 ? 'squid' : (r <= 2 ? 'crab' : 'octo');
+    const pts  = r === 0 ? 30 : (r <= 2 ? 20 : 10);
+    for(let c=0;c<COLS;c++) G.inv.push({c, r, type, pts, alive:true, x:0, y:0, w:0, h:0, hit:0});
+  }
+  G.total = G.inv.length; G.alive = G.inv.length;
+  layoutInv();
+}
+function layoutInv(){
+  for(const iv of G.inv){
+    if(!iv.alive) continue;
+    const sp = SPR[iv.type][G.frame];
+    iv.w = sp.w; iv.h = sp.h;
+    iv.x = G.fx + iv.c*CELLW + (CELLW - sp.w)/2;
+    iv.y = G.fy + iv.r*CELLH;
+  }
+}
+function reset(){
+  G.wave = 1; G.score = 0; G.disp = 0;
+  G.combo = 0; G.maxCombo = 0; G.mult = 1; G.lastHit = -99;
+  G.lives = DIFF[G.diff].lives;
+  G.bullets = []; G.ebullets = []; G.fired = 0; G.hits = 0; G.lastShot = -9;
+  G.ufo = null; G.ufoT = rnd(UFO_MIN*0.6, UFO_MAX*0.6);
+  G.parts = []; G.rings = []; G.pops = [];
+  G.deathT = 0; G.waveT = 0; G.shake = 0; G.newRecord = false;
+  G.px = W/2; G.py = H - 52;
+  G.pw = SPR.ship[0].w; G.ph = SPR.ship[0].h;
+  buildBunkers();
+  buildWave();
+  syncHud(true);
+}
+
+/* ---------- rythme envahisseurs ---------- */
+function invInterval(){
+  const d = DIFF[G.diff];
+  const frac = G.alive / G.total;
+  const base = Math.max(0.11, d.inv - (G.wave-1)*0.035);
+  return Math.max(0.075, base*(0.35 + 0.65*frac));
+}
+function invStep(){
+  let minX = Infinity, maxX = -Infinity;
+  for(const iv of G.inv){
+    if(!iv.alive) continue;
+    if(iv.x < minX) minX = iv.x;
+    if(iv.x + iv.w > maxX) maxX = iv.x + iv.w;
+  }
+  if(minX === Infinity) return;
+  if((G.dir < 0 && minX - STEPX < 16) || (G.dir > 0 && maxX + STEPX > W - 16)){
+    G.fy += DROP; G.dir *= -1;
+  } else {
+    G.fx += G.dir*STEPX;
+  }
+  G.frame ^= 1;
+  layoutInv();
+  G.steps++;
+  const notes = [98, 87, 78, 69];
+  SND.tone(notes[G.steps % 4], .07, 'square', .13, -8);
+  crushBunkers();
+  for(const iv of G.inv){
+    if(iv.alive && iv.y + iv.h >= G.py - 4){ lose('Les envahisseurs ont atteint la base.'); return; }
+  }
+}
+function crushBunkers(){
+  for(const b of G.bunkers){
+    for(const iv of G.inv){
+      if(!iv.alive) continue;
+      if(iv.x > b.x + b.w || iv.x + iv.w < b.x || iv.y > b.y + b.h || iv.y + iv.h < b.y) continue;
+      const c0 = clamp(Math.floor((iv.x - b.x)/BCS), 0, BCOLS-1);
+      const c1 = clamp(Math.floor((iv.x + iv.w - b.x)/BCS), 0, BCOLS-1);
+      const r0 = clamp(Math.floor((iv.y - b.y)/BCS), 0, BROWS-1);
+      const r1 = clamp(Math.floor((iv.y + iv.h - b.y)/BCS), 0, BROWS-1);
+      for(let r=r0;r<=r1;r++) for(let c=c0;c<=c1;c++){
+        const i = r*BCOLS+c;
+        if(b.cells[i] > 0){
+          b.cells[i] = 0;
+          burst(b.x + c*BCS + BCS/2, b.y + r*BCS + BCS/2, '#9b6bff', 3, 90);
+        }
+      }
+    }
+  }
+}
+
+/* ---------- tirs ---------- */
+function fire(){
+  if(G.state !== 'playing') return;
+  const d = DIFF[G.diff];
+  if(G.bullets.length >= d.shots) return;
+  if(G.t - G.lastShot < d.cd) return;
+  G.lastShot = G.t; G.fired++;
+  G.bullets.push({x:G.px, y:G.py - G.ph/2 - 6, vy:-660});
+  SND.tone(920, .07, 'square', .22, -560);
+}
+function enemyFire(){
+  const d = DIFF[G.diff];
+  const max = d.shots + Math.min(3, Math.floor(G.wave/2));
+  if(G.ebullets.length >= max) return;
+  const cols = {};
+  for(const iv of G.inv){
+    if(!iv.alive) continue;
+    if(!cols[iv.c] || iv.y > cols[iv.c].y) cols[iv.c] = iv;
+  }
+  const list = Object.values(cols);
+  if(!list.length) return;
+  const iv = pick(list);
+  G.ebullets.push({x:iv.x + iv.w/2, y:iv.y + iv.h, vy:190 + G.wave*12, ph:0});
+  SND.tone(240, .06, 'sawtooth', .12, -120);
+}
+
+/* ---------- boucliers ---------- */
+function hitBunker(bx, by){
+  for(const b of G.bunkers){
+    if(bx < b.x || bx > b.x + b.w || by < b.y || by > b.y + b.h) continue;
+    const c = Math.floor((bx - b.x)/BCS), r = Math.floor((by - b.y)/BCS);
+    if(c < 0 || r < 0 || c >= BCOLS || r >= BROWS) continue;
+    const i = r*BCOLS + c;
+    if(b.cells[i] > 0){
+      b.cells[i]--;
+      burst(bx, by, '#31e8ff', 5, 130);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ---------- OVNI ---------- */
+function spawnUfo(){
+  const dir = Math.random() < .5 ? 1 : -1;
+  G.ufo = {x: dir > 0 ? -70 : W + 70, y:46, dir, pts: pick([50,100,150,200,300]), ph:0};
+  showBanner('OVNI DÉTECTÉ', G.ufo.pts + ' POINTS À DÉTRUIRE');
+  SND.arp([1200,900,1200,900], .06, 'sine', .3);
+}
+
+/* ---------- score & combo ---------- */
+function addScore(cx, cy, base, color){
+  const v = Math.round(base * G.mult);
+  G.score += v;
+  G.pops.push({x:cx, y:cy, txt:'+'+v, life:1, c:color});
+  D.pScore.classList.remove('bump'); void D.pScore.offsetWidth; D.pScore.classList.add('bump');
+}
+function bumpCombo(){
+  if(G.t - G.lastHit <= COMBO_WIN) G.combo++; else G.combo = 1;
+  G.lastHit = G.t;
+  G.maxCombo = Math.max(G.maxCombo, G.combo);
+  G.mult = clamp(1 + Math.floor(G.combo/4), 1, 5);
+}
+
+/* ---------- effets ---------- */
+function burst(cx, cy, color, n, spd){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*TAU, v = rnd(40, spd);
+    G.parts.push({x:cx, y:cy, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.3,.9), max:.9, c:color, r:rnd(1.4,3.4)});
+  }
+}
+function ring(cx, cy, color, max){ G.rings.push({x:cx, y:cy, r:6, max, life:1, c:color}); }
+function updateFx(dt){
+  for(let i=G.parts.length-1;i>=0;i--){
+    const q = G.parts[i]; q.life -= dt;
+    if(q.life <= 0){ G.parts.splice(i,1); continue; }
+    q.vx *= (1 - 2.2*dt); q.vy = q.vy*(1-2.2*dt) + 90*dt;
+    q.x += q.vx*dt; q.y += q.vy*dt;
+  }
+  for(let i=G.rings.length-1;i>=0;i--){
+    const r = G.rings[i]; r.life -= dt*2.4; r.r += (r.max - r.r)*Math.min(1, dt*9);
+    if(r.life <= 0) G.rings.splice(i,1);
+  }
+  for(let i=G.pops.length-1;i>=0;i--){
+    const q = G.pops[i]; q.life -= dt*1.15; q.y -= 34*dt;
+    if(q.life <= 0) G.pops.splice(i,1);
+  }
+  if(G.shake > 0.2) G.shake *= Math.pow(0.02, dt); else G.shake = 0;
+  if(G.state === 'playing' && G.combo > 0 && G.t - G.lastHit > COMBO_WIN){ G.combo = 0; G.mult = 1; }
+}
+
+/* ---------- étapes de jeu ---------- */
+function update(dt){
+  if(G.state !== 'playing') return;
+  const d = DIFF[G.diff];
+
+  // joueur
+  let mv = 0;
+  if(G.keys.left)  mv -= 1;
+  if(G.keys.right) mv += 1;
+  if(G.padL) mv -= 1;
+  if(G.padR) mv += 1;
+  if(G.touch){
+    const dx = G.touch - G.px;
+    if(Math.abs(dx) > 6) mv = dx > 0 ? 1 : -1;
+  }
+  G.px = clamp(G.px + mv*d.spd*dt, G.pw/2 + 14, W - G.pw/2 - 14);
+  if(G.keys.fire || G.padFire || G.touch) fire();
+
+  // envahisseurs
+  G.invT += dt;
+  let guard = 0;
+  while(G.invT >= invInterval() && guard < 4){
+    G.invT -= invInterval(); guard++;
+    invStep();
+    if(G.state !== 'playing') return;
+  }
+  if(Math.random() < dt * (1 / (DIFF[G.diff].fire * (0.5 + 0.5*G.alive/G.total) * Math.pow(0.94, G.wave-1)))) enemyFire();
+
+  // OVNI
+  if(G.ufo){
+    G.ufo.x += G.ufo.dir * 130 * dt;
+    G.ufo.ph += dt;
+    if(G.ufo.ph > .35){ G.ufo.ph = 0; SND.tone(rnd(900,1400), .08, 'sine', .1, 220); }
+    if(G.ufo.x < -110 || G.ufo.x > W + 110) G.ufo = null;
+  } else {
+    G.ufoT -= dt;
+    if(G.ufoT <= 0){ spawnUfo(); G.ufoT = rnd(UFO_MIN, UFO_MAX); }
+  }
+
+  // bullets joueur
+  for(let i=G.bullets.length-1;i>=0;i--){
+    const b = G.bullets[i];
+    let dead = false;
+    for(let s=0;s<5 && !dead;s++){
+      b.y += b.vy*dt/5;
+      if(b.y < -12){ dead = true; break; }
+      if(hitBunker(b.x, b.y)){ dead = true; break; }
+      if(G.ufo && b.x > G.ufo.x - 32 && b.x < G.ufo.x + 32 && b.y > G.ufo.y - 14 && b.y < G.ufo.y + 14){
+        bumpCombo(); G.hits++;
+        addScore(G.ufo.x, G.ufo.y, G.ufo.pts, '#ffc94a');
+        burst(G.ufo.x, G.ufo.y, '#ffc94a', 26, 300);
+        ring(G.ufo.x, G.ufo.y, '#ffc94a', 70);
+        G.shake = 9;
+        G.ufo = null;
+        SND.arp([880,1180,1480,1760], .06, 'square', .4);
+        dead = true; break;
+      }
+      for(const iv of G.inv){
+        if(!iv.alive) continue;
+        if(b.x > iv.x && b.x < iv.x + iv.w && b.y > iv.y && b.y < iv.y + iv.h){
+          iv.alive = false; G.alive--; G.hits++;
+          bumpCombo();
+          addScore(iv.x + iv.w/2, iv.y + iv.h/2, iv.pts, '#e9f2ff');
+          burst(iv.x + iv.w/2, iv.y + iv.h/2, iv.type === 'squid' ? '#ff4fd8' : (iv.type === 'crab' ? '#31e8ff' : '#9b6bff'), 16, 240);
+          ring(iv.x + iv.w/2, iv.y + iv.h/2, '#ffffff', 34);
+          SND.noise(.1, .3, 1200);
+          SND.tone(180, .09, 'square', .2, -90);
+          dead = true; break;
+        }
+      }
+    }
+    if(dead) G.bullets.splice(i,1);
+  }
+
+  // bullets ennemies
+  for(let i=G.ebullets.length-1;i>=0;i--){
+    const b = G.ebullets[i];
+    b.ph += dt;
+    let dead = false;
+    for(let s=0;s<4 && !dead;s++){
+      b.y += b.vy*dt/4;
+      if(b.y > H + 12){ dead = true; break; }
+      if(hitBunker(b.x, b.y)){ dead = true; break; }
+      if(b.x > G.px - G.pw/2 + 4 && b.x < G.px + G.pw/2 - 4 && b.y > G.py - G.ph/2 + 4 && b.y < G.py + G.ph/2){
+        G.ebullets.splice(i,1); hitShip(); dead = true; break;
+      }
+    }
+    if(dead) G.ebullets.splice(i,1);
+  }
+
+  // envahisseurs qui touchent le vaisseau
+  for(const iv of G.inv){
+    if(!iv.alive) continue;
+    if(iv.x < G.px + G.pw/2 && iv.x + iv.w > G.px - G.pw/2 && iv.y < G.py + G.ph/2 && iv.y + iv.h > G.py - G.ph/2){
+      lose('Un envahisseur a percuté la base.'); return;
+    }
+  }
+
+  // vague terminée
+  if(G.alive <= 0) waveClear();
+}
+
+function hitShip(){
+  if(G.state !== 'playing') return;
+  G.lives--;
+  G.state = 'dying'; G.deathT = 0;
+  G.shake = 18; doFlash();
+  burst(G.px, G.py, '#5cf9a4', 34, 320);
+  burst(G.px, G.py, '#ff5f6d', 22, 240);
+  ring(G.px, G.py, '#ff5f6d', 90);
+  G.combo = 0; G.mult = 1;
+  SND.noise(.35, .5, 300);
+  SND.arp([420,320,240,160], .09, 'sawtooth', .35);
+}
+function waveClear(){
+  G.state = 'wave'; G.waveT = 0;
+  const bonus = 120 * G.wave + 40 * G.lives;
+  G.score += bonus;
+  G.ebullets = [];
+  showBanner('VAGUE ' + G.wave + ' NETTOYÉE', '+' + bonus + ' PTS · BOUCLIERS RÉGÉNÉRÉS');
+  SND.arp([523,659,784,1047,1319], .085, 'triangle', .45);
+}
+function nextWave(){
+  G.wave++;
+  buildWave();
+  buildBunkers();
+  G.state = 'playing';
+  showBanner('VAGUE ' + G.wave, 'CADENCE ACCÉLÉRÉE');
+  SND.tone(300, .12, 'square', .3, 260);
+}
+function lose(msg){
+  if(G.state === 'over') return;
+  G.deathMsg = msg;
+  G.state = 'over';
+  G.shake = 20; doFlash();
+  if(G.score > G.best){
+    G.best = Math.round(G.score); G.newRecord = true;
+    localStorage.setItem('neoinv.best', G.best);
+  }
+  D.goTitle.textContent = 'PARTIE TERMINÉE';
+  D.goScore.textContent = Math.round(G.score);
+  D.goBest.textContent  = G.best;
+  D.goWave.textContent  = G.wave;
+  D.goMsg.textContent   = G.deathMsg;
+  showOverlay('ovOver');
+  SND.arp([440,330,247,175,131], .12, 'sawtooth', .4);
+}
+
+/* ---------- rendu ---------- */
+function fitCanvas(){
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if(CV.width !== W*dpr){ CV.width = W*dpr; CV.height = H*dpr; }
+  X.setTransform(dpr,0,0,dpr,0,0);
+}
+const STARS = [];
+for(let i=0;i<110;i++) STARS.push({x:Math.random()*W, y:Math.random()*H, r:rnd(.5,1.7), p:rnd(0,TAU), s:rnd(.6,2.4)});
+
+function drawArena(){
+  const g = X.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(14,12,32,.62)'); g.addColorStop(1,'rgba(4,6,14,.72)');
+  X.fillStyle = g; X.fillRect(0,0,W,H);
+
+  for(const s of STARS){
+    const a = .18 + .5*Math.abs(Math.sin(G.t*s.s + s.p));
+    X.fillStyle = 'rgba(233,242,255,' + a.toFixed(3) + ')';
+    X.fillRect(s.x, s.y, s.r, s.r);
+  }
+
+  X.strokeStyle = 'rgba(255,255,255,.04)'; X.lineWidth = 1;
+  X.beginPath();
+  for(let c=1;c<15;c++){ X.moveTo(c*64+.5,0); X.lineTo(c*64+.5,H); }
+  for(let r=1;r<11;r++){ X.moveTo(0,r*64+.5); X.lineTo(W,r*64+.5); }
+  X.stroke();
+
+  // ligne de base
+  X.save();
+  X.strokeStyle = 'rgba(92,249,164,.35)'; X.lineWidth = 2;
+  X.beginPath(); X.moveTo(0, H-16.5); X.lineTo(W, H-16.5); X.stroke();
+  X.restore();
+
+  X.save();
+  X.strokeStyle = 'rgba(155,107,255,.45)'; X.lineWidth = 2;
+  X.strokeRect(1,1,W-2,H-2);
+  X.restore();
+}
+function drawBunkers(){
+  for(const b of G.bunkers){
+    for(let r=0;r<BROWS;r++) for(let c=0;c<BCOLS;c++){
+      const v = b.cells[r*BCOLS+c];
+      if(v <= 0) continue;
+      const x = b.x + c*BCS, y = b.y + r*BCS;
+      X.fillStyle = v > 1 ? 'rgba(49,232,255,.55)' : 'rgba(49,232,255,.24)';
+      X.fillRect(x, y, BCS-1, BCS-1);
+    }
+    X.save();
+    X.strokeStyle = 'rgba(49,232,255,.22)'; X.lineWidth = 1;
+    X.strokeRect(b.x-.5, b.y-.5, b.w+1, b.h+1);
+    X.restore();
+  }
+}
+function drawInvaders(){
+  for(const iv of G.inv){
+    if(!iv.alive) continue;
+    const sp = SPR[iv.type][G.frame];
+    X.drawImage(sp.c, iv.x - sp.off, iv.y - sp.off);
+  }
+}
+function drawUfo(){
+  if(!G.ufo) return;
+  const sp = SPR.ufo[0];
+  X.save();
+  X.globalAlpha = .9 + .1*Math.sin(G.t*8);
+  X.drawImage(sp.c, G.ufo.x - sp.w/2 - sp.off, G.ufo.y - sp.h/2 - sp.off);
+  X.restore();
+  X.save();
+  X.globalAlpha = .35 + .25*Math.sin(G.t*6);
+  const rg = X.createRadialGradient(G.ufo.x, G.ufo.y, 4, G.ufo.x, G.ufo.y, 60);
+  rg.addColorStop(0,'rgba(255,201,74,.35)'); rg.addColorStop(1,'rgba(255,201,74,0)');
+  X.fillStyle = rg; X.fillRect(G.ufo.x-60, G.ufo.y-60, 120, 120);
+  X.restore();
+}
+function drawShip(){
+  const sp = SPR.ship[0];
+  const blink = G.shieldT > 0 ? (Math.sin(G.t*22) > 0 ? .45 : 1) : 1;
+  X.save();
+  X.globalAlpha = blink;
+  X.drawImage(sp.c, G.px - sp.w/2 - sp.off, G.py - sp.h/2 - sp.off);
+  X.restore();
+  // moteur
+  X.save();
+  const f = 6 + 5*Math.abs(Math.sin(G.t*14));
+  X.fillStyle = 'rgba(49,232,255,.55)';
+  X.fillRect(G.px - 4, G.py + sp.h/2 - 2, 8, f);
+  X.restore();
+}
+function drawBullets(){
+  X.save();
+  X.shadowColor = 'rgba(92,249,164,.9)'; X.shadowBlur = 12;
+  X.fillStyle = '#eafff5';
+  for(const b of G.bullets) X.fillRect(b.x-1.5, b.y-9, 3, 14);
+  X.restore();
+  X.save();
+  X.shadowColor = 'rgba(255,79,216,.9)'; X.shadowBlur = 12;
+  X.fillStyle = '#ffd9f5';
+  for(const b of G.ebullets){
+    const w = 3 + 2*Math.sin(b.ph*22);
+    X.fillRect(b.x - w/2, b.y - 8, w, 14);
+  }
+  X.restore();
+}
+function drawFx(){
+  for(const q of G.parts){
+    X.globalAlpha = clamp(q.life/q.max, 0, 1);
+    X.fillStyle = q.c;
+    X.fillRect(q.x - q.r/2, q.y - q.r/2, q.r, q.r);
+  }
+  X.globalAlpha = 1;
+  for(const r of G.rings){
+    X.save();
+    X.globalAlpha = clamp(r.life, 0, 1) * .8;
+    X.strokeStyle = r.c; X.lineWidth = 2;
+    X.shadowColor = r.c; X.shadowBlur = 14;
+    X.beginPath(); X.arc(r.x, r.y, r.r, 0, TAU); X.stroke();
+    X.restore();
+  }
+  X.font = '700 15px ' + "'Silkscreen',monospace";
+  X.textAlign = 'center';
+  for(const q of G.pops){
+    X.globalAlpha = clamp(q.life, 0, 1);
+    X.fillStyle = q.c;
+    X.shadowColor = q.c; X.shadowBlur = 12;
+    X.fillText(q.txt, q.x, q.y);
+    X.shadowBlur = 0;
+  }
+  X.globalAlpha = 1;
+  X.textAlign = 'left';
+}
+function draw(){
+  fitCanvas();
+  X.clearRect(0,0,W,H);
+  drawArena();
+  X.save();
+  if(G.shake > 0.2) X.translate(rnd(-G.shake,G.shake), rnd(-G.shake,G.shake));
+  drawBunkers();
+  drawInvaders();
+  drawUfo();
+  if(G.state !== 'dying') drawShip();
+  drawBullets();
+  drawFx();
+  X.restore();
+}
+
+/* ---------- HUD ---------- */
+const cache = {};
+function set(id, val){
+  if(cache[id] === val) return;
+  cache[id] = val; D[id].textContent = val;
+}
+function syncHud(force){
+  const sTxt = String(Math.round(G.disp));
+  set('pScore', sTxt);
+  if(cache.long !== sTxt.length){ cache.long = sTxt.length; D.pScore.classList.toggle('long', sTxt.length > 5); }
+  set('pMultWrap', 'x' + G.mult);
+  set('pCombo', G.combo);
+  set('pLvl', G.wave);
+  set('mLvl', G.wave);
+  set('mBest', G.best);
+  set('pBest', G.best);
+  set('pLives', G.lives);
+  set('pLeft', G.alive);
+  set('pMaxCombo', G.maxCombo);
+  set('pAcc', G.fired ? Math.round(100*G.hits/G.fired) + '%' : '0%');
+  set('pNext', G.alive + ' ENVAHISSEURS');
+  set('pSpeed', G.alive > 0 ? Math.round(60/invInterval()) : 0);
+  set('mFps', Math.round(G.fps));
+  const comboPct = G.combo > 0 ? clamp(1 - (G.t - G.lastHit)/COMBO_WIN, 0, 1)*100 : 0;
+  D.pComboBar.style.width = comboPct.toFixed(1) + '%';
+  D.pProg.style.width = ((G.total - G.alive)/G.total*100).toFixed(1) + '%';
+  if(force){ D.mBest.textContent = G.best; D.pBest.textContent = G.best; }
+}
+
+function showBanner(title, sub){
+  D.bnTitle.textContent = title; D.bnSub.textContent = sub;
+  D.banner.classList.remove('show'); void D.banner.offsetWidth; D.banner.classList.add('show');
+}
+function doFlash(){
+  D.flash.classList.remove('on'); void D.flash.offsetWidth; D.flash.classList.add('on');
+}
+function showOverlay(id){
+  ['ovStart','ovPause','ovOver'].forEach(o=>D[o].classList.toggle('on', o === id));
+}
+function hideOverlays(){ showOverlay(null); }
+
+/* ---------- commandes ---------- */
+function startGame(){
+  SND.init();
+  reset();
+  G.state = 'playing';
+  hideOverlays();
+  showBanner('VAGUE 1', 'DÉFENDS LA BASE');
+  SND.arp([440,660,880], .07, 'triangle', .4);
+}
+function togglePause(){
+  if(G.state === 'playing'){
+    G.state = 'paused'; showOverlay('ovPause');
+    SND.tone(320, .1, 'sine', .3, -120);
+  } else if(G.state === 'paused'){
+    G.state = 'playing';
+    SND.tone(520, .1, 'sine', .3, 160);
+    hideOverlays();
+  }
+}
+function toggleShield(){
+  G.shields = !G.shields;
+  localStorage.setItem('neoinv.shields', G.shields ? '1' : '0');
+  D.bShield.textContent = G.shields ? 'SANS BOUCLIERS' : 'AVEC BOUCLIERS';
+  D.bShield.classList.toggle('on', !G.shields);
+  buildBunkers();
+  showBanner(G.shields ? 'BOUCLIERS ACTIFS' : 'BOUCLIERS DÉSACTIVÉS', G.shields ? 'ILS S\'ENTRETIENNENT' : 'AUCUNE PROTECTION');
+  SND.tone(G.shields ? 700 : 420, .09, 'triangle', .35, G.shields ? 200 : -140);
+}
+
+const LEFTK  = ['arrowleft','a','q','h'];
+const RIGHTK = ['arrowright','d','l'];
+window.addEventListener('keydown', e=>{
+  const key = (e.key || '').toLowerCase();
+  if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(key)) e.preventDefault();
+  if(LEFTK.includes(key)){ G.keys.left = true; return; }
+  if(RIGHTK.includes(key)){ G.keys.right = true; return; }
+  if(key === ' ' || key === 'enter'){
+    if(G.state === 'menu' || G.state === 'over') startGame();
+    else G.keys.fire = true;
+    return;
+  }
+  if(key === 'p' || key === 'escape'){ togglePause(); return; }
+  if(key === 'r'){ if(G.state !== 'menu') startGame(); return; }
+  if(key === 'm'){ toggleSound(); return; }
+});
+window.addEventListener('keyup', e=>{
+  const key = (e.key || '').toLowerCase();
+  if(LEFTK.includes(key)) G.keys.left = false;
+  if(RIGHTK.includes(key)) G.keys.right = false;
+  if(key === ' ') G.keys.fire = false;
+});
+
+function toggleSound(){
+  SND.init();
+  SND.muted = !SND.muted;
+  localStorage.setItem('neoinv.mute', SND.muted ? '1' : '0');
+  D.bSound.textContent = 'SON : ' + (SND.muted ? 'OFF' : 'ON');
+  D.bSound.classList.toggle('off', SND.muted);
+  if(!SND.muted) SND.tone(660, .07, 'triangle', .35, 180);
+}
+
+D.bStart.addEventListener('click', startGame);
+D.bResume.addEventListener('click', togglePause);
+D.bRestart.addEventListener('click', startGame);
+D.bRestart2.addEventListener('click', startGame);
+D.bRestart3.addEventListener('click', startGame);
+D.bPause.addEventListener('click', togglePause);
+D.bPadPause.addEventListener('click', togglePause);
+D.bSound.addEventListener('click', toggleSound);
+D.bShield.addEventListener('click', toggleShield);
+
+D.diffs.addEventListener('click', e=>{
+  const b = e.target.closest('.dbtn');
+  if(!b) return;
+  G.diff = b.dataset.diff;
+  [...D.diffs.querySelectorAll('.dbtn')].forEach(x=>x.classList.toggle('on', x === b));
+  localStorage.setItem('neoinv.diff', G.diff);
+  SND.init(); SND.tone(560, .05, 'triangle', .3, 120);
+});
+
+// pad tactile
+function hold(btn, on, off){
+  btn.addEventListener('pointerdown', e=>{ e.preventDefault(); on(); });
+  btn.addEventListener('pointerup', ()=>off());
+  btn.addEventListener('pointerleave', ()=>off());
+  btn.addEventListener('pointercancel', ()=>off());
+}
+hold(D.bLeft,  ()=>{ G.padL = true;  }, ()=>{ G.padL = false; });
+hold(D.bRight, ()=>{ G.padR = true;  }, ()=>{ G.padR = false; });
+hold(D.bFire,  ()=>{ G.padFire = true; }, ()=>{ G.padFire = false; });
+
+// glisser sur le canvas : viser + tir auto
+CV.addEventListener('pointerdown', e=>{
+  if(G.state !== 'playing') return;
+  const r = CV.getBoundingClientRect();
+  G.touch = (e.clientX - r.left) * (W / r.width);
+  CV.setPointerCapture && CV.setPointerCapture(e.pointerId);
+});
+CV.addEventListener('pointermove', e=>{
+  if(!G.touch) return;
+  const r = CV.getBoundingClientRect();
+  G.touch = (e.clientX - r.left) * (W / r.width);
+});
+const endTouch = ()=>{ G.touch = null; };
+CV.addEventListener('pointerup', endTouch);
+CV.addEventListener('pointercancel', endTouch);
+CV.addEventListener('pointerleave', endTouch);
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && G.state === 'playing') togglePause();
+});
+
+/* ---------- boucle ---------- */
+let last = performance.now();
+function loop(now){
+  let dt = (now - last)/1000; last = now;
+  if(dt > 0.1) dt = 0.1;
+  G.t += dt;
+  G.fpsAcc += dt; G.fpsN++;
+  if(G.fpsAcc > .5){ G.fps = G.fpsN/G.fpsAcc; G.fpsAcc = 0; G.fpsN = 0; }
+
+  if(G.state === 'playing'){
+    update(dt);
+  } else if(G.state === 'dying'){
+    G.deathT += dt;
+    if(G.deathT >= DIE_FADE){
+      if(G.lives > 0){
+        G.state = 'playing';
+        G.shieldT = 2.2;
+        G.ebullets = [];
+        G.px = W/2;
+        showBanner('VIES RESTANTES : ' + G.lives, 'RÉAPPARITION');
+      } else {
+        lose('Tous les vaisseaux ont été détruits.');
+      }
+    }
+  } else if(G.state === 'wave'){
+    G.waveT += dt;
+    if(G.waveT >= WAVE_PAUSE) nextWave();
+  }
+
+  G.disp += (G.score - G.disp) * Math.min(1, dt*9);
+  if(Math.abs(G.score - G.disp) < 0.6) G.disp = G.score;
+  if(G.shieldT > 0) G.shieldT = Math.max(0, G.shieldT - dt);
+
+  updateFx(dt);
+  draw();
+  syncHud();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- init ---------- */
+if(localStorage.getItem('neoinv.mute') === '1'){
+  SND.muted = true; D.bSound.textContent = 'SON : OFF'; D.bSound.classList.add('off');
+}
+G.shields = localStorage.getItem('neoinv.shields') !== '0';
+D.bShield.textContent = G.shields ? 'SANS BOUCLIERS' : 'AVEC BOUCLIERS';
+D.bShield.classList.toggle('on', !G.shields);
+const savedDiff = localStorage.getItem('neoinv.diff');
+if(savedDiff && DIFF[savedDiff]){
+  G.diff = savedDiff;
+  [...D.diffs.querySelectorAll('.dbtn')].forEach(x=>x.classList.toggle('on', x.dataset.diff === savedDiff));
+}
+reset();
+syncHud(true);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
